@@ -14,7 +14,7 @@ MPC_VER			= 1.0.3
 MINGW_VER		= 5.0
 
 .PHONY: all
-all: w32api
+all: mingw0
 
 CWD = $(CURDIR)
 GZ = $(CWD)/gz
@@ -94,7 +94,7 @@ CFG_GCC_B = $(CFG_BINUTILS_B) --disable-bootstrap --enable-languages="c" \
 CFG_GCC_H = $(CFG_BINUTILS_H) --disable-bootstrap --enable-languages="c" \
 	--with-gmp=$(B) --with-mpfr=$(B) --with-mpc=$(B) \
 	--disable-multilib --disable-libssp --disable-shared \
-	--without-headers
+	--disable-win32-registry --disable-sjlj-exceptions --disable-libvtv
 
 NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
 
@@ -158,28 +158,28 @@ gcc_b: $(SRC)/$(GCC)/README
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_B) $(CFG_GCC_B) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
-.PHONY: gcc_h
-gcc_h: $(SRC)/$(GCC)/README
+.PHONY: gcc_h0
+gcc_h0: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
 		$(XPATH) make -j$(NO_CORES) all-gcc && make install-gcc-strip
 
-.PHONY: mingw
-mingw: mingwrt w32api
+.PHONY: mingw0
+mingw0: mingwrt0 w32api0
 
-.PHONY: mingwrt
-mingwrt: $(T)/include/direct.h
-$(T)/include/direct.h: $(SRC)/$(MINGWRT)/README
+.PHONY: mingwrt0
+mingwrt0: $(T)/mingw/include/direct.h
+$(T)/mingw/include/direct.h: $(SRC)/$(MINGWRT)/README
 	rm -rf $(TMP)/$(MINGWRT) ; mkdir $(TMP)/$(MINGWRT)
 	cd $(TMP)/$(MINGWRT) ;\
-		$(XPATH) $(SRC)/$(MINGWRT)/configure --prefix=$(T) --host=$(HOST) &&\
+		$(XPATH) $(SRC)/$(MINGWRT)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
 		make install-headers
 
-.PHONY: w32api
-w32api: $(T)/include/windows.h
-$(T)/include/windows.h: $(SRC)/$(W32API)/README
+.PHONY: w32api0
+w32api0: $(T)/mingw/include/windows.h
+$(T)/mingw/include/windows.h: $(SRC)/$(W32API)/README
 	rm -rf $(TMP)/$(W32API) ; mkdir $(TMP)/$(W32API)
 	cd $(TMP)/$(W32API) ;\
-		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T) --host=$(HOST) &&\
+		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
 		make install-headers
