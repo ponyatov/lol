@@ -3,14 +3,15 @@ HOST = i686-pc-mingw32
 TARGET = i486-elf
 # arm-none-eabi
 
-GCC_VER			= 7.1.0
+GCC_VER			= 6.3.0
+#7.1.0
 BINUTILS_VER	= 2.28
 GMP_VER			= 6.1.2
 MPFR_VER		= 3.1.5
 MPC_VER			= 1.0.3
 
 .PHONY: all
-all: gcc_b
+all: gcc_h
 
 CWD = $(CURDIR)
 GZ = $(CWD)/gz
@@ -52,7 +53,7 @@ $(GZ)/$(GMP_GZ):
 $(GZ)/$(MPFR_GZ):
 	$(WGET) http://www.mpfr.org/mpfr-current/$(MPFR_GZ) && touch $@
 $(GZ)/$(MPC_GZ):
-	$(WGET) ftp://ftp.gnu.org/gnu/mpc/$(MPC_GZ)
+	$(WGET) ftp://ftp.gnu.org/gnu/mpc/$(MPC_GZ) && touch $@
 	
 .PHONY: src
 src: $(SRC)/$(BINUTILS)/README
@@ -62,17 +63,26 @@ $(SRC)/%/README: $(GZ)/%.tar.bz2
 $(SRC)/%/README: $(GZ)/%.tar.gz
 	cd $(SRC) ;  zcat $< | tar x && touch $@
 	
-CFG = configure --disable-doc
+CFG = configure --disable-doc --build=$(BUILD)
 CFG_B = $(CFG) --prefix=$(B) --datarootdir=$(TMP)
+CFG_H = $(CFG) --prefix=$(H) --datarootdir=$(TMP) --host=$(BUILD)
+CFG_T = $(CFG) --prefix=$(T) --datarootdir=$(TMP) --host=$(HOST)
 
-CFG_BINUTILS_B = --disable-nls --target=$(BUILD)
+CFG_BINUTILS_B = --disable-nls
+CFG_BINUTILS_H = --disable-nls --target=$(HOST)
+CFG_BINUTILS_T = --disable-nls --target=$(TARGET)
+
 CFG_GCC_B = $(CFG_BINUTILS_B) --disable-bootstrap --enable-languages="c" \
 	--with-gmp=$(B) --with-mpfr=$(B) --with-mpc=$(B) \
 	--disable-multilib
+CFG_GCC_H = $(CFG_BINUTILS_H) --disable-bootstrap --enable-languages="c" \
+	--with-gmp=$(B) --with-mpfr=$(B) --with-mpc=$(B) \
+	--disable-multilib
+
 
 NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
 
-XPATH = PATH=$(B)/bin:$(PATH)
+XPATH = PATH=$(B)/bin:$(H)/bin:$(PATH)
  
 .PHONY: binutils_b binutils_h binutils_t
 binutils_b: $(SRC)/$(BINUTILS)/README
@@ -80,10 +90,22 @@ binutils_b: $(SRC)/$(BINUTILS)/README
 	cd $(TMP)/$(BINUTILS) ;\
 		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_B) $(CFG_BINUTILS_B) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
+binutils_h: $(SRC)/$(BINUTILS)/README
+	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
+	cd $(TMP)/$(BINUTILS) ;\
+		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_H) $(CFG_BINUTILS_H) &&\
+		$(XPATH) make -j$(NO_CORES) && make install-strip
+binutils_t: $(SRC)/$(BINUTILS)/README
+	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
+	cd $(TMP)/$(BINUTILS) ;\
+		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_T) $(CFG_BINUTILS_T) &&\
+		$(XPATH) make -j$(NO_CORES) && make install-strip
 		
 CFG_GMP_B = --disable-shared
 CFG_MPFR_B = $(CFG_GMP_B) --with-gmp=$(B)
 CFG_MPC_B = $(CFG_MPFR_B) --with-mpfr=$(B)
+
+CFG_GMP_H = 
 
 .PHONY: libs_b
 libs_b: gmp_b mpfr_b mpc_b
@@ -93,6 +115,12 @@ gmp_b: $(SRC)/$(GMP)/README
 	rm -rf $(TMP)/$(GMP) ; mkdir $(TMP)/$(GMP)
 	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_B) $(CFG_GMP_B) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
+.PHONY: gmp_h
+gmp_h: $(SRC)/$(GMP)/README
+	rm -rf $(TMP)/$(GMP) ; mkdir $(TMP)/$(GMP)
+	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_T) $(CFG_GMP_H)
+#	 &&\
+#		$(XPATH) make -j$(NO_CORES) && make install-strip
 
 .PHONY: mpfr_b
 mpfr_b: $(SRC)/$(MPFR)/README
@@ -112,3 +140,10 @@ gcc_b: $(SRC)/$(GCC)/README
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_B) $(CFG_GCC_B) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
+.PHONY: gcc_h
+gcc_h: $(SRC)/$(GCC)/README
+	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
+	cd $(TMP)/$(GCC) ;\
+		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
+		$(XPATH) make -j$(NO_CORES) all-gcc 
+#		&& make install-gcc-strip
