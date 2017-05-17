@@ -1,3 +1,9 @@
 *~
 *.swp
 gz/
+src/
+tmp/
+x86_64-linux-gnu/
+i686-pc-mingw32/
+i486-elf/
+

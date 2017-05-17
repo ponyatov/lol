@@ -21,4 +21,15 @@
 	</buildSpec>
 	<natures>
 	</natures>
+	<filteredResources>
+		<filter>
+			<id>1495040115445</id>
+			<name>src</name>
+			<type>21</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-true-(INSTALL|README).*</arguments>
+			</matcher>
+		</filter>
+	</filteredResources>
 </projectDescription>
