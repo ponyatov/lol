@@ -4,8 +4,6 @@ TARGET = i486-elf
 # arm-none-eabi
 
 GCC_VER			= 7.1.0
-#6.3.0
-#7.1.0
 BINUTILS_VER	= 2.28
 GMP_VER			= 6.1.2
 MPFR_VER		= 3.1.5
@@ -93,8 +91,10 @@ CFG_GCC_B = $(CFG_BINUTILS_B) --disable-bootstrap --enable-languages="c" \
 	--disable-multilib --disable-libssp --disable-shared
 CFG_GCC_H = $(CFG_BINUTILS_H) --disable-bootstrap --enable-languages="c" \
 	--with-gmp=$(B) --with-mpfr=$(B) --with-mpc=$(B) \
-	--disable-multilib --disable-libssp --disable-shared \
+	--disable-multilib --enable-shared --enable-threads \
 	--disable-win32-registry --disable-sjlj-exceptions --disable-libvtv
+
+#	--disable-libssp 
 
 NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
 
@@ -163,10 +163,11 @@ gcc_h0: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
-		$(XPATH) make -j$(NO_CORES) all-gcc && make install-gcc-strip
+		$(XPATH) make -j$(NO_CORES) all-gcc && make install-strip-gcc
 
-.PHONY: mingw0
+.PHONY: mingw0 mingw
 mingw0: mingwrt0 w32api0
+mingw: mingwrt w32api
 
 .PHONY: mingwrt0
 mingwrt0: $(T)/mingw/include/direct.h
@@ -175,6 +176,13 @@ $(T)/mingw/include/direct.h: $(SRC)/$(MINGWRT)/README
 	cd $(TMP)/$(MINGWRT) ;\
 		$(XPATH) $(SRC)/$(MINGWRT)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
 		make install-headers
+.PHONY: mingwrt
+mingwrt: $(T)/mingw/lib/crt1.o
+$(T)/mingw/lib/crt1.o: $(H)/bin/$(HOST)-gcc
+	cd $(TMP)/$(MINGWRT) ;\
+		$(XPATH) ./config.status --recheck ;\
+		$(XPATH) ./config.status ;\
+		$(XPATH) make install
 
 .PHONY: w32api0
 w32api0: $(T)/mingw/include/windows.h
@@ -183,3 +191,10 @@ $(T)/mingw/include/windows.h: $(SRC)/$(W32API)/README
 	cd $(TMP)/$(W32API) ;\
 		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
 		make install-headers
+.PHONY: w32api
+w32api: $(H)/bin/$(HOST)-gcc
+	cd $(TMP)/$(W32API) ;\
+		$(XPATH) ./config.status --recheck ;\
+		$(XPATH) ./config.status ;\
+		$(XPATH) make install
+		
