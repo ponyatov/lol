@@ -67,14 +67,14 @@ $(SRC)/%/README: $(GZ)/%.tar.gz
 CFG = configure --disable-doc --datarootdir=$(TMP)
 # --build=$(BUILD)
 CFG_B = $(CFG) --prefix=$(B) 
-CFG_H = $(CFG) --prefix=$(H)
+CFG_H = $(CFG) --prefix=$(H) --build=$(BUILD) --host=$(BUILD)
 # --host=$(BUILD)
 CFG_T = $(CFG) --prefix=$(T)
 # --host=$(HOST)
 
 CFG_BINUTILS_B = --disable-nls --disable-werror --target=$(BUILD)
-CFG_BINUTILS_H = --disable-nls --disable-werror --with-sysroot=$(H) --target=$(HOST)
-CFG_BINUTILS_T = --disable-nls --disable-werror --with-sysroot=$(T) --target=$(TARGET)
+CFG_BINUTILS_H = --disable-nls --disable-werror --with-sysroot=$(T) --target=$(HOST)
+CFG_BINUTILS_T = --disable-nls --disable-werror --with-sysroot="D:/LLVM" --target=$(TARGET)
 
 CFG_GCC_B = $(CFG_BINUTILS_B) --disable-bootstrap --enable-languages="c" \
 	--with-gmp=$(B) --with-mpfr=$(B) --with-mpc=$(B) \
@@ -100,7 +100,7 @@ binutils_b: $(SRC)/$(BINUTILS)/README
 binutils_h: $(SRC)/$(BINUTILS)/README
 	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
 	cd $(TMP)/$(BINUTILS) ;\
-		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_B) $(CFG_BINUTILS_H) &&\
+		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_H) $(CFG_BINUTILS_H) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
 binutils_t: $(SRC)/$(BINUTILS)/README
 	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
@@ -112,7 +112,7 @@ CFG_GMP_B = --disable-shared
 CFG_MPFR_B = $(CFG_GMP_B) --with-gmp=$(B)
 CFG_MPC_B = $(CFG_MPFR_B) --with-mpfr=$(B)
 
-CFG_GMP_H = 
+CFG_GMP_H = --disable-shared --host=$(BUILD) --target=$(BUILD)
 
 .PHONY: libs_b
 libs_b: gmp_b mpfr_b mpc_b
@@ -125,9 +125,8 @@ gmp_b: $(SRC)/$(GMP)/README
 .PHONY: gmp_h
 gmp_h: $(SRC)/$(GMP)/README
 	rm -rf $(TMP)/$(GMP) ; mkdir $(TMP)/$(GMP)
-	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_T) $(CFG_GMP_H)
-#	 &&\
-#		$(XPATH) make -j$(NO_CORES) && make install-strip
+	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_B) $(CFG_GMP_H) &&\
+		$(XPATH) make -j$(NO_CORES) && make install-strip
 
 .PHONY: mpfr_b
 mpfr_b: $(SRC)/$(MPFR)/README
@@ -151,6 +150,7 @@ gcc_b: $(SRC)/$(GCC)/README
 gcc_h: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
-		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
-		$(XPATH) make -j$(NO_CORES) all-gcc 
+		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) 
+#		&&\
+#		$(XPATH) make -j$(NO_CORES) all-gcc 
 #		&& make install-gcc-strip
