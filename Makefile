@@ -40,9 +40,11 @@ CFG = configure --disable-nls
 CFG_B = $(CFG) --prefix=$(B) --target=$(BUILD)
 
 NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
+
+XPATH = PATH=$(B)/bin:$(PATH)
  
 .PHONY: binutils_b binutils_h binutils_t
 binutils_b: $(SRC)/$(BINUTILS)/README
 	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
-	cd $(TMP)/$(BINUTILS) ; $(SRC)/$(BINUTILS)/$(CFG_B) &&\
-		make -j$(NO_CORES) && make install-strip
+	cd $(TMP)/$(BINUTILS) ; $(XPATH) $(SRC)/$(BINUTILS)/$(CFG_B) --datarootdir=$(TMP) &&\
+		$(XPATH) make -j$(NO_CORES) && make install-strip
