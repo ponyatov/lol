@@ -87,6 +87,9 @@ CFG_GCC_H = $(CFG_BINUTILS_H) --disable-bootstrap --enable-languages="c" \
 NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
 
 XPATH = PATH=$(B)/bin:$(H)/bin:$(PATH)
+
+.PHONY: build
+build: binutils_b libs_b gcc_b
  
 .PHONY: binutils_b binutils_h binutils_t
 binutils_b: $(SRC)/$(BINUTILS)/README
