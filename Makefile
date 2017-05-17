@@ -73,6 +73,8 @@ $(SRC)/%/README: $(GZ)/%.tar.bz2
 	cd $(SRC) ; bzcat $< | tar x && touch $@
 $(SRC)/%/README: $(GZ)/%.tar.gz
 	cd $(SRC) ;  zcat $< | tar x && touch $@
+$(SRC)/%/README: $(GZ)/%-mingw32-src.tar.xz
+	cd $(SRC) ; xzcat $< | tar x && touch $@
 	
 CFG = configure --disable-doc --datarootdir=$(TMP)
 # --build=$(BUILD)
@@ -173,8 +175,6 @@ $(T)/include/direct.h: $(SRC)/$(MINGWRT)/README
 	cd $(TMP)/$(MINGWRT) ;\
 		$(XPATH) $(SRC)/$(MINGWRT)/configure --prefix=$(T) --host=$(HOST) &&\
 		make install-headers
-$(SRC)/$(MINGWRT)/README: $(GZ)/$(MINGWRT_GZ)
-	cd $(SRC) ; xzcat $< |tar x && touch $@
 
 .PHONY: w32api
 w32api: $(T)/include/windows.h
@@ -183,5 +183,3 @@ $(T)/include/windows.h: $(SRC)/$(W32API)/README
 	cd $(TMP)/$(W32API) ;\
 		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T) --host=$(HOST) &&\
 		make install-headers
-$(SRC)/$(W32API)/README: $(GZ)/$(W32API_GZ)
-	cd $(SRC) ; xzcat $< |tar x && touch $@
