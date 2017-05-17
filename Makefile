@@ -11,8 +11,10 @@ GMP_VER			= 6.1.2
 MPFR_VER		= 3.1.5
 MPC_VER			= 1.0.3
 
+MINGW_VER		= 5.0
+
 .PHONY: all
-all: gcc_h
+all: w32api
 
 CWD = $(CURDIR)
 GZ = $(CWD)/gz
@@ -29,22 +31,26 @@ dirs:
 
 GCC = gcc-$(GCC_VER)
 GCC_GZ = $(GCC).tar.bz2
-
 BINUTILS = binutils-$(BINUTILS_VER)
 BINUTILS_GZ = $(BINUTILS).tar.bz2
 
 GMP = gmp-$(GMP_VER)
 GMP_GZ = $(GMP).tar.bz2
-
 MPFR = mpfr-$(MPFR_VER)
 MPFR_GZ = $(MPFR).tar.bz2
-
 MPC = mpc-$(MPC_VER)
 MPC_GZ = $(MPC).tar.gz
 
+MINGWRT = mingwrt-$(MINGW_VER)
+MINGWRT_GZ = $(MINGWRT)-mingw32-src.tar.xz
+W32API = w32api-$(MINGW_VER)
+W32API_GZ = $(W32API)-mingw32-src.tar.xz
+
 WGET = wget -P $(GZ)
 .PHONY: gz
-gz: $(GZ)/$(GCC_GZ) $(GZ)/$(BINUTILS_GZ) $(GZ)/$(GMP_GZ) $(GZ)/$(MPFR_GZ) $(GZ)/$(MPC_GZ)
+gz: $(GZ)/$(GCC_GZ) $(GZ)/$(BINUTILS_GZ) \
+	$(GZ)/$(GMP_GZ) $(GZ)/$(MPFR_GZ) $(GZ)/$(MPC_GZ) \
+	$(GZ)/$(MINGWRT_GZ) $(GZ)/$(W32API_GZ)
 $(GZ)/$(GCC_GZ):
 	$(WGET) http://gcc.skazkaforyou.com/releases/$(GCC)/$(GCC_GZ) && touch $@
 $(GZ)/$(BINUTILS_GZ):
@@ -55,6 +61,10 @@ $(GZ)/$(MPFR_GZ):
 	$(WGET) http://www.mpfr.org/mpfr-current/$(MPFR_GZ) && touch $@
 $(GZ)/$(MPC_GZ):
 	$(WGET) ftp://ftp.gnu.org/gnu/mpc/$(MPC_GZ) && touch $@
+$(GZ)/$(MINGWRT_GZ):	
+	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/mingwrt/$(MINGWRT)/$(MINGWRT_GZ) && touch $@
+$(GZ)/$(W32API_GZ):
+	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/w32api/$(W32API)/$(W32API_GZ)	
 	
 .PHONY: src
 src: $(SRC)/$(BINUTILS)/README
@@ -67,8 +77,8 @@ $(SRC)/%/README: $(GZ)/%.tar.gz
 CFG = configure --disable-doc --datarootdir=$(TMP)
 # --build=$(BUILD)
 CFG_B = $(CFG) --prefix=$(B) 
-CFG_H = $(CFG) --prefix=$(H) --build=$(BUILD) --host=$(BUILD)
-# --host=$(BUILD)
+CFG_H = $(CFG) --prefix=$(H)  
+#--build=$(BUILD) --host=$(BUILD)
 CFG_T = $(CFG) --prefix=$(T)
 # --host=$(HOST)
 
@@ -150,7 +160,28 @@ gcc_b: $(SRC)/$(GCC)/README
 gcc_h: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
-		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) 
-#		&&\
-#		$(XPATH) make -j$(NO_CORES) all-gcc 
-#		&& make install-gcc-strip
+		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
+		$(XPATH) make -j$(NO_CORES) all-gcc && make install-gcc-strip
+
+.PHONY: mingw
+mingw: mingwrt w32api
+
+.PHONY: mingwrt
+mingwrt: $(T)/include/direct.h
+$(T)/include/direct.h: $(SRC)/$(MINGWRT)/README
+	rm -rf $(TMP)/$(MINGWRT) ; mkdir $(TMP)/$(MINGWRT)
+	cd $(TMP)/$(MINGWRT) ;\
+		$(XPATH) $(SRC)/$(MINGWRT)/configure --prefix=$(T) --host=$(HOST) &&\
+		make install-headers
+$(SRC)/$(MINGWRT)/README: $(GZ)/$(MINGWRT_GZ)
+	cd $(SRC) ; xzcat $< |tar x && touch $@
+
+.PHONY: w32api
+w32api: $(T)/include/windows.h
+$(T)/include/windows.h: $(SRC)/$(W32API)/README
+	rm -rf $(TMP)/$(W32API) ; mkdir $(TMP)/$(W32API)
+	cd $(TMP)/$(W32API) ;\
+		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T) --host=$(HOST) &&\
+		make install-headers
+$(SRC)/$(W32API)/README: $(GZ)/$(W32API_GZ)
+	cd $(SRC) ; xzcat $< |tar x && touch $@
