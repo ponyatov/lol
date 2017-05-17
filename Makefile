@@ -158,12 +158,15 @@ gcc_b: $(SRC)/$(GCC)/README
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_B) $(CFG_GCC_B) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
-.PHONY: gcc_h0
+.PHONY: gcc_h0 gcc_h
 gcc_h0: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
 		$(XPATH) make -j$(NO_CORES) all-gcc && make install-strip-gcc
+gcc_h: mingwrt w32api
+	cd $(TMP)/$(GCC) ;\
+		$(XPATH) make -j$(NO_CORES) all && make install-strip
 
 .PHONY: mingw0 mingw
 mingw0: mingwrt0 w32api0
@@ -182,7 +185,7 @@ $(T)/mingw/lib/crt1.o: $(H)/bin/$(HOST)-gcc
 	cd $(TMP)/$(MINGWRT) ;\
 		$(XPATH) ./config.status --recheck ;\
 		$(XPATH) ./config.status ;\
-		$(XPATH) make install
+		$(XPATH) make ; $(XPATH) make install
 
 .PHONY: w32api0
 w32api0: $(T)/mingw/include/windows.h
@@ -192,9 +195,10 @@ $(T)/mingw/include/windows.h: $(SRC)/$(W32API)/README
 		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
 		make install-headers
 .PHONY: w32api
-w32api: $(H)/bin/$(HOST)-gcc
+w32api: $(T)/mingw/lib/libd3d8.a
+$(T)/mingw/lib/libd3d8.a: $(H)/bin/$(HOST)-gcc
 	cd $(TMP)/$(W32API) ;\
 		$(XPATH) ./config.status --recheck ;\
 		$(XPATH) ./config.status ;\
-		$(XPATH) make install
+		$(XPATH) make ; $(XPATH) make install
 		
