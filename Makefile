@@ -5,9 +5,10 @@ TARGET = i486-elf
 
 BINUTILS_VER = 2.28
 GMP_VER = 6.1.2
+MPFR_VER = 3.1.5
 
 .PHONY: all
-all: gmp_b
+all: mpfr_b
 
 CWD = $(CURDIR)
 GZ = $(CWD)/gz
@@ -28,13 +29,18 @@ BINUTILS_GZ = $(BINUTILS).tar.bz2
 GMP = gmp-$(GMP_VER)
 GMP_GZ = $(GMP).tar.bz2
 
+MPFR = mpfr-$(MPFR_VER)
+MPFR_GZ = $(MPFR).tar.bz2
+
 WGET = wget -P $(GZ)
 .PHONY: gz
-gz: $(GZ)/$(BINUTILS_GZ) $(GZ)/$(GMP_GZ)
+gz: $(GZ)/$(BINUTILS_GZ) $(GZ)/$(GMP_GZ) $(GZ)/$(MPFR_GZ)
 $(GZ)/$(BINUTILS_GZ):
 	$(WGET) http://ftp.gnu.org/gnu/binutils/$(BINUTILS_GZ) && touch $@
 $(GZ)/$(GMP_GZ):
 	$(WGET) https://gmplib.org/download/gmp/$(GMP_GZ) && touch $@
+$(GZ)/$(MPFR_GZ):
+	$(WGET) http://www.mpfr.org/mpfr-current/$(MPFR_GZ) && touch $@
 	
 .PHONY: src
 src: $(SRC)/$(BINUTILS)/README
@@ -56,8 +62,17 @@ binutils_b: $(SRC)/$(BINUTILS)/README
 		--disable-nls --target=$(BUILD) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
 		
+LIB_CFG = --disable-shared
+GMP_CFG = $(LIB_CFG)
+MPFR_CFG = $(GMP_CFG) --with-gmp=$(B)
+		
 .PHONY: gmp_b
 gmp_b: $(SRC)/$(GMP)/README
 	rm -rf $(TMP)/$(GMP) ; mkdir $(TMP)/$(GMP)
-	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_B) --disable-shared &&\
+	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_B) $(GMP_CFG) &&\
+		$(XPATH) make -j$(NO_CORES) && make install-strip
+.PHONY: mpfr_b
+mpfr_b: $(SRC)/$(MPFR)/README
+	rm -rf $(TMP)/$(MPFR) ; mkdir $(TMP)/$(MPFR)
+	cd $(TMP)/$(MPFR) ; $(XPATH) $(SRC)/$(MPFR)/$(CFG_B) $(MPFR_CFG) &&\
 		$(XPATH) make -j$(NO_CORES) && make install-strip
