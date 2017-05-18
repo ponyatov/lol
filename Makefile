@@ -10,7 +10,12 @@ MPC_VER			= 1.0.3
 
 MINGW_VER		= 5.0
 
+PCRE_VER		= 10.22
+#10.23 iswild error
+
 MAK_VER			= 4.2
+FLEX_VER		= 2.6.4
+BISON_VER		= 3.0.4
 
 
 .PHONY: all
@@ -29,6 +34,8 @@ DIRS = $(GZ) $(B) $(H) $(T) $(SRC) $(TMP)
 dirs:
 	mkdir -p $(DIRS)
 
+# download gz/cross
+
 GCC = gcc-$(GCC_VER)
 GCC_GZ = $(GCC).tar.bz2
 BINUTILS = binutils-$(BINUTILS_VER)
@@ -46,31 +53,52 @@ MINGWRT_GZ = $(MINGWRT)-mingw32-src.tar.xz
 W32API = w32api-$(MINGW_VER)
 W32API_GZ = $(W32API)-mingw32-src.tar.xz
 
-MAK = make-$(MAK_VER)
-MAK_GZ = $(MAK).tar.bz2
-
 WGET = wget -P $(GZ)
-.PHONY: gz
+.PHONY: gz gz_l gz_t
 gz: $(GZ)/$(GCC_GZ) $(GZ)/$(BINUTILS_GZ) \
 	$(GZ)/$(GMP_GZ) $(GZ)/$(MPFR_GZ) $(GZ)/$(MPC_GZ) \
 	$(GZ)/$(MINGWRT_GZ) $(GZ)/$(W32API_GZ) \
-	$(GZ)/$(MAK_GZ)
+	gz_l gz_t
 $(GZ)/$(GCC_GZ):
-	$(WGET) http://gcc.skazkaforyou.com/releases/$(GCC)/$(GCC_GZ) && touch $@
+	$(WGET) http://gcc.skazkaforyou.com/releases/$(GCC)/$(GCC_GZ)
 $(GZ)/$(BINUTILS_GZ):
-	$(WGET) http://ftp.gnu.org/gnu/binutils/$(BINUTILS_GZ) && touch $@
+	$(WGET) http://ftp.gnu.org/gnu/binutils/$(BINUTILS_GZ)
 $(GZ)/$(GMP_GZ):
-	$(WGET) https://gmplib.org/download/gmp/$(GMP_GZ) && touch $@
+	$(WGET) https://gmplib.org/download/gmp/$(GMP_GZ)
 $(GZ)/$(MPFR_GZ):
-	$(WGET) http://www.mpfr.org/mpfr-current/$(MPFR_GZ) && touch $@
+	$(WGET) http://www.mpfr.org/mpfr-current/$(MPFR_GZ)
 $(GZ)/$(MPC_GZ):
-	$(WGET) ftp://ftp.gnu.org/gnu/mpc/$(MPC_GZ) && touch $@
+	$(WGET) ftp://ftp.gnu.org/gnu/mpc/$(MPC_GZ)
 $(GZ)/$(MINGWRT_GZ):	
-	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/mingwrt/$(MINGWRT)/$(MINGWRT_GZ) && touch $@
+	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/mingwrt/$(MINGWRT)/$(MINGWRT_GZ)
 $(GZ)/$(W32API_GZ):
 	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/w32api/$(W32API)/$(W32API_GZ)
+	
+# gz/libs
+
+PCRE = pcre2-$(PCRE_VER)
+PCRE_GZ = $(PCRE).tar.bz2
+
+gz_l: $(GZ)/$(PCRE_GZ)
+$(GZ)/$(PCRE_GZ):
+	$(WGET) https://ftp.pcre.org/pub/pcre/$(PCRE_GZ)
+
+MAK = make-$(MAK_VER)
+MAK_GZ = $(MAK).tar.bz2
+FLEX = flex-$(FLEX_VER)
+FLEX_GZ = $(FLEX).tar.gz
+BISON = bison-$(BISON_VER)
+BISON_GZ = $(BISON).tar.xz	
+
+gz_t: $(GZ)/$(MAK_GZ) $(GZ)/$(FLEX_GZ) $(GZ)/$(BISON_GZ)	
 $(GZ)/$(MAK_GZ):
 	$(WGET) http://ftp.gnu.org/gnu/make/$(MAK_GZ)
+$(GZ)/$(FLEX_GZ):	
+	$(WGET) https://github.com/westes/flex/releases/download/v$(FLEX_VER)/$(FLEX_GZ)
+$(GZ)/$(BISON_GZ):	
+	$(WGET) http://ftp.gnu.org/gnu/bison/$(BISON_GZ)
+	
+## src/	
 	
 .PHONY: src
 src: $(SRC)/$(BINUTILS)/README
@@ -88,6 +116,8 @@ CFG_B = $(CFG) --prefix=$(B)
 CFG_H = $(CFG) --prefix=$(H)  
 #--build=$(BUILD) --host=$(BUILD)
 CFG_T = $(CFG) --prefix=$(T) --enable-shared --disable-static --build=$(BUILD) --host=$(HOST)
+
+## binutils
 
 CFG_BINUTILS_B = --disable-nls --disable-werror --target=$(BUILD)
 CFG_BINUTILS_H = --disable-nls --disable-werror --with-sysroot --target=$(HOST)
@@ -125,6 +155,8 @@ binutils_t: $(SRC)/$(BINUTILS)/README
 	cd $(TMP)/$(BINUTILS) ;\
 		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_T) $(CFG_BINUTILS_T) &&\
 		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
+		
+## libs
 		
 CFG_GMP_B = --disable-shared
 CFG_MPFR_B = $(CFG_GMP_B) --with-gmp=$(B)
@@ -171,6 +203,8 @@ mpc_t: $(SRC)/$(MPC)/README
 	cd $(TMP)/$(MPC) ; $(XPATH) $(SRC)/$(MPC)/$(CFG_T) $(CFG_MPC_T) &&\
 		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 
+## gcc
+
 .PHONY: gcc_b
 gcc_b: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
@@ -186,6 +220,8 @@ gcc_h0: $(SRC)/$(GCC)/README
 gcc_h: mingwrt w32api
 	cd $(TMP)/$(GCC) ;\
 		$(MAKE) -j$(NO_CORES) all && $(MAKE) install-strip
+		
+## mingw32		
 
 .PHONY: mingw0 mingw
 mingw0: mingwrt0 w32api0
@@ -221,9 +257,27 @@ $(H)/mingw/lib/libd3d8.a: $(H)/bin/$(HOST)-gcc
 		$(XPATH) ./config.status ;\
 		$(MAKE) ; $(MAKE) install
 
+## GNU libs
+
+.PHONY: pcre
+pcre: $(SRC)/$(PCRE)/README
+	rm -rf $(TMP)/$(PCRE) ; mkdir $(TMP)/$(PCRE)
+	cd $(TMP)/$(PCRE) ; $(XPATH) $(SRC)/$(PCRE)/$(CFG_T) &&\
+		$(MAKE) -j$(NO_CORES) all && $(MAKE) install-strip
+
+## GNU tools
+
 .PHONY: mak
-mak: $(T)/bin/$(TARGET)-make
-$(T)/bin/$(TARGET)-make: $(SRC)/$(MAK)/README
+mak: $(T)/bin/make.exe
+$(T)/bin/make.exe: $(SRC)/$(MAK)/README
 	rm -rf $(TMP)/$(MAK) ; mkdir $(TMP)/$(MAK)
-	cd $(TMP)/$(MAK) ;\
-		$(XPATH) $(SRC)/$(MAK)/$(CFG_T) && $(MAKE) && $(MAKE) install-strip
+	cd $(TMP)/$(MAK) ; $(XPATH) $(SRC)/$(MAK)/$(CFG_T) &&\
+		$(MAKE) -j$(NO_CORES) all && $(MAKE) install-strip &&\
+	rm $(T)/include/gnumake.h && touch $@
+
+.PHONY: flex
+flex: $(T)/bin/flex.exe
+$(T)/bin/flex.exe: $(SRC)/$(FLEX)/README
+	rm -rf $(TMP)/$(FLEX) ; mkdir $(TMP)/$(FLEX)
+	cd $(TMP)/$(FLEX) ; $(XPATH) $(SRC)/$(FLEX)/$(CFG_T) --prefix=$(T)/flex &&\
+		$(MAKE) -j$(NO_CORES) all && $(MAKE) install-strip
