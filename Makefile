@@ -1,7 +1,6 @@
 BUILD = $(shell gcc -dumpmachine)
 HOST = i686-pc-mingw32
-TARGET = i486-elf
-# arm-none-eabi
+TARGET = mingw32
 
 GCC_VER			= 7.1.0
 BINUTILS_VER	= 2.28
@@ -10,6 +9,9 @@ MPFR_VER		= 3.1.5
 MPC_VER			= 1.0.3
 
 MINGW_VER		= 5.0
+
+MAK_VER			= 4.2
+
 
 .PHONY: all
 all: mingw0
@@ -44,11 +46,15 @@ MINGWRT_GZ = $(MINGWRT)-mingw32-src.tar.xz
 W32API = w32api-$(MINGW_VER)
 W32API_GZ = $(W32API)-mingw32-src.tar.xz
 
+MAK = make-$(MAK_VER)
+MAK_GZ = $(MAK).tar.bz2
+
 WGET = wget -P $(GZ)
 .PHONY: gz
 gz: $(GZ)/$(GCC_GZ) $(GZ)/$(BINUTILS_GZ) \
 	$(GZ)/$(GMP_GZ) $(GZ)/$(MPFR_GZ) $(GZ)/$(MPC_GZ) \
-	$(GZ)/$(MINGWRT_GZ) $(GZ)/$(W32API_GZ)
+	$(GZ)/$(MINGWRT_GZ) $(GZ)/$(W32API_GZ) \
+	$(GZ)/$(MAK_GZ)
 $(GZ)/$(GCC_GZ):
 	$(WGET) http://gcc.skazkaforyou.com/releases/$(GCC)/$(GCC_GZ) && touch $@
 $(GZ)/$(BINUTILS_GZ):
@@ -62,7 +68,9 @@ $(GZ)/$(MPC_GZ):
 $(GZ)/$(MINGWRT_GZ):	
 	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/mingwrt/$(MINGWRT)/$(MINGWRT_GZ) && touch $@
 $(GZ)/$(W32API_GZ):
-	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/w32api/$(W32API)/$(W32API_GZ)	
+	$(WGET) https://downloads.sourceforge.net/project/mingw/MinGW/Base/w32api/$(W32API)/$(W32API_GZ)
+$(GZ)/$(MAK_GZ):
+	$(WGET) http://ftp.gnu.org/gnu/make/$(MAK_GZ)
 	
 .PHONY: src
 src: $(SRC)/$(BINUTILS)/README
@@ -79,12 +87,12 @@ CFG = configure --disable-doc --datarootdir=$(TMP)
 CFG_B = $(CFG) --prefix=$(B) 
 CFG_H = $(CFG) --prefix=$(H)  
 #--build=$(BUILD) --host=$(BUILD)
-CFG_T = $(CFG) --prefix=$(T)
-# --host=$(HOST)
+CFG_T = $(CFG) --prefix=$(T) --enable-shared --disable-static --build=$(BUILD) --host=$(HOST)
 
 CFG_BINUTILS_B = --disable-nls --disable-werror --target=$(BUILD)
-CFG_BINUTILS_H = --disable-nls --disable-werror --with-sysroot=$(T) --target=$(HOST)
-CFG_BINUTILS_T = --disable-nls --disable-werror --with-sysroot="D:/LLVM" --target=$(TARGET)
+CFG_BINUTILS_H = --disable-nls --disable-werror --with-sysroot --target=$(HOST)
+CFG_BINUTILS_T = --disable-nls --disable-werror --with-sysroot="D:/LOL"
+#--target=$(TARGET)
 
 CFG_GCC_B = $(CFG_BINUTILS_B) --disable-bootstrap --enable-languages="c" \
 	--with-gmp=$(B) --with-mpfr=$(B) --with-mpc=$(B) \
@@ -94,11 +102,9 @@ CFG_GCC_H = $(CFG_BINUTILS_H) --disable-bootstrap --enable-languages="c" \
 	--disable-multilib --enable-shared --enable-threads \
 	--disable-win32-registry --disable-sjlj-exceptions --disable-libvtv
 
-#	--disable-libssp 
-
-NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
-
 XPATH = PATH=$(B)/bin:$(H)/bin:$(PATH)
+NO_CORES = $(shell grep processor /proc/cpuinfo|wc -l)
+MAKE = $(XPATH) make
 
 .PHONY: build
 build: binutils_b libs_b gcc_b
@@ -108,97 +114,116 @@ binutils_b: $(SRC)/$(BINUTILS)/README
 	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
 	cd $(TMP)/$(BINUTILS) ;\
 		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_B) $(CFG_BINUTILS_B) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 binutils_h: $(SRC)/$(BINUTILS)/README
 	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
 	cd $(TMP)/$(BINUTILS) ;\
 		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_H) $(CFG_BINUTILS_H) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 binutils_t: $(SRC)/$(BINUTILS)/README
 	rm -rf $(TMP)/$(BINUTILS) ; mkdir $(TMP)/$(BINUTILS)
 	cd $(TMP)/$(BINUTILS) ;\
-		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_B) $(CFG_BINUTILS_T) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+		$(XPATH) $(SRC)/$(BINUTILS)/$(CFG_T) $(CFG_BINUTILS_T) &&\
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 		
 CFG_GMP_B = --disable-shared
 CFG_MPFR_B = $(CFG_GMP_B) --with-gmp=$(B)
 CFG_MPC_B = $(CFG_MPFR_B) --with-mpfr=$(B)
 
-CFG_GMP_H = --disable-shared --host=$(BUILD) --target=$(BUILD)
+CFG_GMP_T = 
+CFG_MPFR_T = $(CFG_GMP_T) --with-gmp=$(T)
+CFG_MPC_T = $(CFG_MPFR_T) --with-mpfr=$(T)
 
-.PHONY: libs_b
+.PHONY: libs_b libs_t
 libs_b: gmp_b mpfr_b mpc_b
+libs_t: gmp_t mpfr_t mpc_t
 		
 .PHONY: gmp_b
 gmp_b: $(SRC)/$(GMP)/README
 	rm -rf $(TMP)/$(GMP) ; mkdir $(TMP)/$(GMP)
 	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_B) $(CFG_GMP_B) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
-.PHONY: gmp_h
-gmp_h: $(SRC)/$(GMP)/README
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
+.PHONY: gmp_t
+gmp_t: $(SRC)/$(GMP)/README
 	rm -rf $(TMP)/$(GMP) ; mkdir $(TMP)/$(GMP)
-	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_B) $(CFG_GMP_H) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+	cd $(TMP)/$(GMP) ; $(XPATH) $(SRC)/$(GMP)/$(CFG_T) $(CFG_GMP_T) &&\
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 
 .PHONY: mpfr_b
 mpfr_b: $(SRC)/$(MPFR)/README
 	rm -rf $(TMP)/$(MPFR) ; mkdir $(TMP)/$(MPFR)
 	cd $(TMP)/$(MPFR) ; $(XPATH) $(SRC)/$(MPFR)/$(CFG_B) $(CFG_MPFR_B) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
+.PHONY: mpfr_t
+mpfr_t: $(SRC)/$(MPFR)/README
+	rm -rf $(TMP)/$(MPFR) ; mkdir $(TMP)/$(MPFR)
+	cd $(TMP)/$(MPFR) ; $(XPATH) $(SRC)/$(MPFR)/$(CFG_T) $(CFG_MPFR_T) &&\
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 
 .PHONY: mpc_b
 mpc_b: $(SRC)/$(MPC)/README
 	rm -rf $(TMP)/$(MPC) ; mkdir $(TMP)/$(MPC)
 	cd $(TMP)/$(MPC) ; $(XPATH) $(SRC)/$(MPC)/$(CFG_B) $(CFG_MPC_B) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
+.PHONY: mpc_t
+mpc_t: $(SRC)/$(MPC)/README
+	rm -rf $(TMP)/$(MPC) ; mkdir $(TMP)/$(MPC)
+	cd $(TMP)/$(MPC) ; $(XPATH) $(SRC)/$(MPC)/$(CFG_T) $(CFG_MPC_T) &&\
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 
 .PHONY: gcc_b
 gcc_b: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_B) $(CFG_GCC_B) &&\
-		$(XPATH) make -j$(NO_CORES) && make install-strip
+		$(MAKE) -j$(NO_CORES) && $(MAKE) install-strip
 .PHONY: gcc_h0 gcc_h
 gcc_h0: $(SRC)/$(GCC)/README
 	rm -rf $(TMP)/$(GCC) ; mkdir $(TMP)/$(GCC)
 	cd $(TMP)/$(GCC) ;\
 		$(XPATH) $(SRC)/$(GCC)/$(CFG_H) $(CFG_GCC_H) &&\
-		$(XPATH) make -j$(NO_CORES) all-gcc && make install-strip-gcc
+		$(MAKE) -j$(NO_CORES) all-gcc && $(MAKE) install-strip-gcc
 gcc_h: mingwrt w32api
 	cd $(TMP)/$(GCC) ;\
-		$(XPATH) make -j$(NO_CORES) all && make install-strip
+		$(MAKE) -j$(NO_CORES) all && $(MAKE) install-strip
 
 .PHONY: mingw0 mingw
 mingw0: mingwrt0 w32api0
 mingw: mingwrt w32api
 
 .PHONY: mingwrt0
-mingwrt0: $(T)/mingw/include/direct.h
-$(T)/mingw/include/direct.h: $(SRC)/$(MINGWRT)/README
+mingwrt0: $(H)/mingw/include/direct.h
+$(H)/mingw/include/direct.h: $(SRC)/$(MINGWRT)/README
 	rm -rf $(TMP)/$(MINGWRT) ; mkdir $(TMP)/$(MINGWRT)
 	cd $(TMP)/$(MINGWRT) ;\
 		$(XPATH) $(SRC)/$(MINGWRT)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
-		make install-headers
+		$(MAKE) install-headers
 .PHONY: mingwrt
-mingwrt: $(T)/mingw/lib/crt1.o
-$(T)/mingw/lib/crt1.o: $(H)/bin/$(HOST)-gcc
+mingwrt: $(H)/mingw/lib/crt1.o
+$(H)/mingw/lib/crt1.o: $(H)/bin/$(HOST)-gcc
 	cd $(TMP)/$(MINGWRT) ;\
 		$(XPATH) ./config.status --recheck ;\
 		$(XPATH) ./config.status ;\
-		$(XPATH) make ; $(XPATH) make install
+		$(MAKE) ; $(MAKE) install
 
 .PHONY: w32api0
-w32api0: $(T)/mingw/include/windows.h
-$(T)/mingw/include/windows.h: $(SRC)/$(W32API)/README
+w32api0: $(H)/mingw/include/windows.h
+$(H)/mingw/include/windows.h: $(SRC)/$(W32API)/README
 	rm -rf $(TMP)/$(W32API) ; mkdir $(TMP)/$(W32API)
 	cd $(TMP)/$(W32API) ;\
 		$(XPATH) $(SRC)/$(W32API)/configure --prefix=$(T)/mingw --host=$(HOST) &&\
-		make install-headers
+		$(MAKE) install-headers
 .PHONY: w32api
-w32api: $(T)/mingw/lib/libd3d8.a
-$(T)/mingw/lib/libd3d8.a: $(H)/bin/$(HOST)-gcc
+w32api: $(H)/mingw/lib/libd3d8.a
+$(H)/mingw/lib/libd3d8.a: $(H)/bin/$(HOST)-gcc
 	cd $(TMP)/$(W32API) ;\
 		$(XPATH) ./config.status --recheck ;\
 		$(XPATH) ./config.status ;\
-		$(XPATH) make ; $(XPATH) make install
-		
+		$(MAKE) ; $(MAKE) install
+
+.PHONY: mak
+mak: $(T)/bin/$(TARGET)-make
+$(T)/bin/$(TARGET)-make: $(SRC)/$(MAK)/README
+	rm -rf $(TMP)/$(MAK) ; mkdir $(TMP)/$(MAK)
+	cd $(TMP)/$(MAK) ;\
+		$(XPATH) $(SRC)/$(MAK)/$(CFG_T) && $(MAKE) && $(MAKE) install-strip
